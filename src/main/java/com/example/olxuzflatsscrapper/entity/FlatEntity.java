@@ -1,6 +1,6 @@
 package com.example.olxuzflatsscrapper.entity;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.Objects;
 import java.util.UUID;
 import javax.persistence.Entity;
@@ -14,7 +14,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 import org.hibernate.Hibernate;
-import org.hibernate.annotations.UpdateTimestamp;
 
 @Entity
 @Table(name = "flat_entity")
@@ -36,8 +35,7 @@ public class FlatEntity {
     private String district;
     private String link;
 
-    @UpdateTimestamp
-    private LocalDateTime lastUpdatedAt;
+    private LocalDate lastUpdatedAt;
 
     @Override
     public boolean equals(Object o) {

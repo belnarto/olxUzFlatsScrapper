@@ -23,3 +23,7 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
   main:
     banner_mode: "OFF"
+
+olx:
+  base-url: "https://www.olx.uz"
+  flats-path: ${olx.base-url}"/d/nedvizhimost/kvartiry/arenda-dolgosrochnaya/tashkent/"
