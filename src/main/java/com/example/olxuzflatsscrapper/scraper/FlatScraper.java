@@ -1,13 +1,16 @@
 package com.example.olxuzflatsscrapper.scraper;
 
+import com.example.olxuzflatsscrapper.converter.FlatConverter;
 import com.example.olxuzflatsscrapper.dto.FlatDto;
 import com.example.olxuzflatsscrapper.dto.FlatDto.FlatDtoBuilder;
-import com.example.olxuzflatsscrapper.service.FlatService;
+import com.example.olxuzflatsscrapper.repository.FlatRepository;
+
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
@@ -23,8 +26,9 @@ import org.springframework.web.client.RestTemplate;
 @Slf4j
 public class FlatScraper {
 
-    private final FlatService flatService;
+    private final FlatRepository flatRepository;
     private final RestTemplate restTemplate;
+    private final FlatConverter flatConverter;
 
     @Value("${olx.base-url}")
     private String baseUrl;
@@ -32,22 +36,42 @@ public class FlatScraper {
     @Value("${olx.flats-path}")
     private String flatsPath;
 
-    public List<FlatDto> getFlats(int minPrice, int maxPrice, int roomCount) {
+    public void parseFlats() {
+        int minPrice = 250;
+        int maxPrice = 800;
+
+        for (int rooms = 1; rooms <= 3; rooms++) {
+            for (int price = minPrice; price <= maxPrice; price += 50) {
+                for (int pn = 1; pn <= 25; pn++) {
+                    List<FlatDto> flats = getFlats(price, price + 50, rooms, pn);
+                    flats.stream()
+                            .map(flatConverter::toEntity)
+                            .forEach(e -> flatRepository.findByName(e.getName())
+                                    .ifPresentOrElse(ent -> {
+                                        ent.setCost(e.getCost());
+                                        flatRepository.save(ent);
+                                    }, () -> flatRepository.save(e)));
+                }
+            }
+        }
+    }
+
+    public List<FlatDto> getFlats(int minPrice, int maxPrice, int roomCount, int pageNum) {
         Map<String, Integer> params = Map.of("minPrice", minPrice, "maxPrice", maxPrice, "roomCount", roomCount,
-            "pageNumber", 1);
+                "pageNumber", pageNum);
         String rawHtml = restTemplate.getForObject(flatsPath, String.class, params);
 
         Document document = Jsoup.parse(rawHtml);
         Elements root = document.getElementsByClass("offer-wrapper");
 
         return root
-            .stream()
-            .filter(e -> e.getElementsByAttribute("href").size() == 3)
-            .map(this::parseFlatElement)
-            .filter(Optional::isPresent)
-            .map(Optional::get)
-            .peek(d -> d.setRoomNumber(roomCount))
-            .toList();
+                .stream()
+                .filter(e -> e.getElementsByAttribute("href").size() == 3)
+                .map(this::parseFlatElement)
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .peek(d -> d.setRoomNumber(roomCount))
+                .toList();
     }
 
     private Optional<FlatDto> parseFlatElement(Element flatElement) {
@@ -57,12 +81,24 @@ public class FlatScraper {
             builder.link(flatElement.getElementsByAttribute("href").get(1).attr("href"));
 
             String text = flatElement.text()
-                .replace(" Квартиры » Аренда долгосрочная", "")
-                .replace("Ташкент,", "")
-                .trim();
+                    .replace(" Договорная", "");
+//            log.info("text1" + text);
+
+            if (text.contains("000 сум")) {
+                return Optional.empty();
+            }
+
+            String nameAndCost = text.substring(0, text.indexOf("у.е. Т")).trim();
+//            log.info("nameAndCost" + nameAndCost);
+
+            text = text
+                    .replace(" Квартиры » Аренда долгосрочная", "")
+                    .replace("Ташкент,", "")
+                    .trim();
+//            log.info("text2" + text);
 
             int yeIndex = text.indexOf("у.е.");
-            String nameAndCost = text.substring(0, text.indexOf("у.е.")).trim();
+
             int whLastIndex = nameAndCost.lastIndexOf(' ');
             String name = nameAndCost.substring(0, whLastIndex).trim();
             String cost = nameAndCost.substring(whLastIndex + 1).trim();
@@ -70,6 +106,7 @@ public class FlatScraper {
             builder.cost(Integer.parseInt(cost));
 
             int districtIndex = text.lastIndexOf(" район ");
+//            log.info("districtIndex" + districtIndex);
             String district = text.substring(yeIndex + 4, districtIndex).trim();
             builder.district(district);
 
@@ -96,10 +133,18 @@ public class FlatScraper {
             return LocalDate.parse(rawStr.replace(" ноября ", ".11."), formatter);
         }
         if (rawStr.contains(" окт.")) {
-            return LocalDate.parse(rawStr.replace(" окт.", ".10.2022"), formatter);
+            String replace = rawStr.replace(" окт.", ".10.2022");
+            if (replace.length() == 9) {
+                replace = "0" + replace;
+            }
+            return LocalDate.parse(replace, formatter);
         }
         if (rawStr.contains(" сен.")) {
-            return LocalDate.parse(rawStr.replace(" сен.", ".09.2022"), formatter);
+            String replace = rawStr.replace(" сен.", ".09.2022");
+            if (replace.length() == 9) {
+                replace = "0" + replace;
+            }
+            return LocalDate.parse(replace, formatter);
         }
         if (rawStr.contains(" августа ")) {
             return LocalDate.parse(rawStr.replace(" августа ", ".08."), formatter);

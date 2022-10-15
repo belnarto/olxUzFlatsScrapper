@@ -14,7 +14,6 @@ public class FlatService {
 
     private final FlatRepository flatRepository;
     private final FlatConverter flatConverter;
-    private final FlatScraper flatScraper;
 
     public List<FlatDto> findAll() {
         return flatRepository.findAll().stream()

@@ -19,7 +19,9 @@ public class FlatController {
 
     @GetMapping
     public List<FlatDto> getFlats() {
-        return flatScraper.getFlats(350, 390, 1);
+        flatScraper.parseFlats();
+        return List.of();
+//        return flatScraper.getFlats(350, 390, 1);
     }
 
     @PostMapping

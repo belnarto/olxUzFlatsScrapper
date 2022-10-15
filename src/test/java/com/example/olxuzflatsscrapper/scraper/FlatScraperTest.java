@@ -53,7 +53,7 @@ class FlatScraperTest {
             .setBody(mockHtml)
             .addHeader("Content-Type", "text/html; charset=utf-8"));
 
-        List<FlatDto> flats = flatScraper.getFlats(1, 1, 1);
+        List<FlatDto> flats = flatScraper.getFlats(1, 1, 1, 1);
     }
 
 }
