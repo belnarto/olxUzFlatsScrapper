@@ -38,7 +38,7 @@ public class FlatScraper {
 
     public void parseFlats() {
         int minPrice = 250;
-        int maxPrice = 800;
+        int maxPrice = 900;
 
         for (int rooms = 1; rooms <= 3; rooms++) {
             for (int price = minPrice; price <= maxPrice; price += 50) {
@@ -97,6 +97,7 @@ public class FlatScraper {
                     .trim();
 //            log.info("text2" + text);
 
+            nameAndCost = nameAndCost.replace(" Квартиры » Аренда долгосрочная", "");
             int yeIndex = text.indexOf("у.е.");
 
             int whLastIndex = nameAndCost.lastIndexOf(' ');
@@ -108,6 +109,7 @@ public class FlatScraper {
             int districtIndex = text.lastIndexOf(" район ");
 //            log.info("districtIndex" + districtIndex);
             String district = text.substring(yeIndex + 4, districtIndex).trim();
+            district = district.replaceAll(".* ", "");
             builder.district(district);
 
             if (text.contains("Сегодня")) {
