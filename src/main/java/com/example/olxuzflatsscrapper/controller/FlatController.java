@@ -1,6 +1,7 @@
 package com.example.olxuzflatsscrapper.controller;
 
 import com.example.olxuzflatsscrapper.dto.FlatDto;
+import com.example.olxuzflatsscrapper.scraper.FlatScraper;
 import com.example.olxuzflatsscrapper.service.FlatService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -14,10 +15,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class FlatController {
 
     private final FlatService flatService;
+    private final FlatScraper flatScraper;
 
     @GetMapping
-    public List<FlatDto> getAll() {
-        return flatService.findAll();
+    public List<FlatDto> getFlats() {
+        return flatScraper.getFlats(350, 390, 1);
     }
 
     @PostMapping

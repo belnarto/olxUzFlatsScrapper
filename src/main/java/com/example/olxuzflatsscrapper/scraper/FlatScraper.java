@@ -6,6 +6,7 @@ import com.example.olxuzflatsscrapper.service.FlatService;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,52 +32,55 @@ public class FlatScraper {
     @Value("${olx.flats-path}")
     private String flatsPath;
 
-    public List<FlatDto> getFlats() {
-        String rawHtml = restTemplate.getForObject(flatsPath, String.class);
+    public List<FlatDto> getFlats(int minPrice, int maxPrice, int roomCount) {
+        Map<String, Integer> params = Map.of("minPrice", minPrice, "maxPrice", maxPrice, "roomCount", roomCount,
+            "pageNumber", 1);
+        String rawHtml = restTemplate.getForObject(flatsPath, String.class, params);
+
         Document document = Jsoup.parse(rawHtml);
-        Elements root = document.getElementById("root").getElementsByAttributeValue("data-cy", "l-card");
+        Elements root = document.getElementsByClass("offer-wrapper");
 
         return root
             .stream()
-            .filter(e -> e.childrenSize() > 0)
-            .map(e -> e.childNodes().size() > 1 ? e.child(1) : e.child(0))
+            .filter(e -> e.getElementsByAttribute("href").size() == 3)
             .map(this::parseFlatElement)
             .filter(Optional::isPresent)
-            .map(Optional::get).toList();
+            .map(Optional::get)
+            .peek(d -> d.setRoomNumber(roomCount))
+            .toList();
     }
 
     private Optional<FlatDto> parseFlatElement(Element flatElement) {
         try {
-            if (flatElement.hasAttr("href")) {
-                FlatDtoBuilder builder = FlatDto.builder();
+            FlatDtoBuilder builder = FlatDto.builder();
 
-                String link = baseUrl + flatElement.attr("href");
-                builder.link(link);
+            builder.link(flatElement.getElementsByAttribute("href").get(1).attr("href"));
 
-                String text = flatElement.text().replace("Ташкент, ", "").trim();
+            String text = flatElement.text()
+                .replace(" Квартиры » Аренда долгосрочная", "")
+                .replace("Ташкент,", "")
+                .trim();
 
-                int yeIndex = text.indexOf("у.е.");
-                String nameAndCost = text.substring(0, text.indexOf("у.е.")).trim();
-                int whLastIndex = nameAndCost.lastIndexOf(' ');
-                String name = nameAndCost.substring(0, whLastIndex).trim();
-                String cost = nameAndCost.substring(whLastIndex + 1).trim();
-                builder.name(name);
-                builder.cost(Integer.parseInt(cost));
+            int yeIndex = text.indexOf("у.е.");
+            String nameAndCost = text.substring(0, text.indexOf("у.е.")).trim();
+            int whLastIndex = nameAndCost.lastIndexOf(' ');
+            String name = nameAndCost.substring(0, whLastIndex).trim();
+            String cost = nameAndCost.substring(whLastIndex + 1).trim();
+            builder.name(name);
+            builder.cost(Integer.parseInt(cost));
 
-                int districtIndex = text.lastIndexOf("район - ");
-                String district = text.substring(yeIndex + 4, districtIndex).trim();
-                builder.district(district);
+            int districtIndex = text.lastIndexOf(" район ");
+            String district = text.substring(yeIndex + 4, districtIndex).trim();
+            builder.district(district);
 
-                if (text.contains(" - Сегодня")) {
-                    builder.lastUpdatedAt(LocalDate.now());
-                } else {
-                    int yearIndex = text.lastIndexOf(" г.");
-                    String date = text.substring(districtIndex + 7, yearIndex).trim();
-                    builder.lastUpdatedAt(getDate(date));
-                }
-
-                return Optional.of(builder.build());
+            if (text.contains("Сегодня")) {
+                builder.lastUpdatedAt(LocalDate.now());
+            } else {
+                String date = text.substring(districtIndex + 7).trim();
+                builder.lastUpdatedAt(getDate(date));
             }
+
+            return Optional.of(builder.build());
         } catch (Exception ex) {
             log.error(ex.getMessage());
         }
@@ -91,11 +95,11 @@ public class FlatScraper {
         if (rawStr.contains(" ноября ")) {
             return LocalDate.parse(rawStr.replace(" ноября ", ".11."), formatter);
         }
-        if (rawStr.contains(" октября ")) {
-            return LocalDate.parse(rawStr.replace(" октября ", ".10."), formatter);
+        if (rawStr.contains(" окт.")) {
+            return LocalDate.parse(rawStr.replace(" окт.", ".10.2022"), formatter);
         }
-        if (rawStr.contains(" сентября ")) {
-            return LocalDate.parse(rawStr.replace(" сентября ", ".09."), formatter);
+        if (rawStr.contains(" сен.")) {
+            return LocalDate.parse(rawStr.replace(" сен.", ".09.2022"), formatter);
         }
         if (rawStr.contains(" августа ")) {
             return LocalDate.parse(rawStr.replace(" августа ", ".08."), formatter);

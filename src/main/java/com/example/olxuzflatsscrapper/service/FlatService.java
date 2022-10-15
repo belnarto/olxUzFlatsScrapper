@@ -3,6 +3,7 @@ package com.example.olxuzflatsscrapper.service;
 import com.example.olxuzflatsscrapper.converter.FlatConverter;
 import com.example.olxuzflatsscrapper.dto.FlatDto;
 import com.example.olxuzflatsscrapper.repository.FlatRepository;
+import com.example.olxuzflatsscrapper.scraper.FlatScraper;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -13,6 +14,7 @@ public class FlatService {
 
     private final FlatRepository flatRepository;
     private final FlatConverter flatConverter;
+    private final FlatScraper flatScraper;
 
     public List<FlatDto> findAll() {
         return flatRepository.findAll().stream()

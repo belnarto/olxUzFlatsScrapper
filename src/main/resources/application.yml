@@ -26,4 +26,4 @@ spring:
 
 olx:
   base-url: "https://www.olx.uz"
-  flats-path: ${olx.base-url}"/d/nedvizhimost/kvartiry/arenda-dolgosrochnaya/tashkent/"
+  flats-path: ${olx.base-url}/d/nedvizhimost/kvartiry/arenda-dolgosrochnaya/tashkent/?currency=UYE&search[photos]=1&search[filter_float_price:from]={minPrice}&search[filter_float_price:to]={maxPrice}&search[filter_float_number_of_rooms:from]={roomCount}&search[filter_float_number_of_rooms:to]={roomCount}&view=list&page={pageNumber}
